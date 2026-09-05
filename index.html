@@ -31,6 +31,7 @@
     --chrome-solid: #e2e2e9;
     --hair: rgba(23,23,26,.10);
     --fill: rgba(23,23,26,.06);
+    --fill-2: rgba(23,23,26,.11);
     --accent: #0a7cff;
     --danger: #ff3b30;
     --card-ink: #1c1c1e;
@@ -55,6 +56,7 @@
       --chrome-solid: #1a1a1f;
       --hair: rgba(255,255,255,.11);
       --fill: rgba(255,255,255,.07);
+      --fill-2: rgba(255,255,255,.13);
       --accent: #4da2ff;
       --danger: #ff453a;
       --card-ink: #f2f2f7;
@@ -98,19 +100,15 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 14px; }
   @media (min-width: 700px) { .grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
 
-  /* Фон карточки ставит JS. Поверхность матовая, поэтому никакого
-     background-image здесь нет: вычисленный цвет виден как есть. */
-  .card {
-    position: relative; display: flex; flex-direction: column; gap: 10px;
-    min-height: 136px; padding: 15px 16px; text-align: left;
-    border-radius: 26px; color: var(--card-ink);
-    box-shadow: var(--edge), var(--lift);
-    transition: transform .16s cubic-bezier(.32,.72,0,1), box-shadow .16s ease;
+  /* Карточка — <button>, поэтому кнопку удаления в неё не вложить:
+     обе лежат в .cell. Анимации и data-id живут на ячейке. */
+  .cell {
+    position: relative; display: flex;
+    -webkit-touch-callout: none;
   }
-  .card:active { transform: scale(.975); box-shadow: var(--edge), var(--lift-sm); }
   /* backwards, а не both: иначе конечный transform анимации перебил бы :active */
-  .card.enter { animation: card-in .34s cubic-bezier(.32,.72,0,1) backwards; }
-  .card.leave { animation: card-out .24s ease forwards; pointer-events: none; }
+  .cell.enter { animation: card-in .34s cubic-bezier(.32,.72,0,1) backwards; }
+  .cell.leave { animation: card-out .24s ease forwards; pointer-events: none; }
   @keyframes card-in {
     from { opacity: 0; transform: translateY(10px) scale(.97); }
     to { opacity: 1; transform: none; }
@@ -118,6 +116,31 @@
   @keyframes card-out {
     to { opacity: 0; transform: scale(.9); }
   }
+
+  /* Фон карточки ставит JS. Поверхность матовая, поэтому никакого
+     background-image здесь нет: вычисленный цвет виден как есть. */
+  .card {
+    flex: 1; display: flex; flex-direction: column; gap: 10px;
+    min-height: 136px; padding: 15px 16px; text-align: left;
+    border-radius: 26px; color: var(--card-ink);
+    box-shadow: var(--edge), var(--lift);
+    -webkit-user-select: none; user-select: none;
+    transition: transform .16s cubic-bezier(.32,.72,0,1), box-shadow .16s ease;
+  }
+  .card:active { transform: scale(.975); box-shadow: var(--edge), var(--lift-sm); }
+
+  .trash {
+    position: absolute; top: -7px; right: -7px;
+    width: 38px; height: 38px; border-radius: 19px;
+    display: grid; place-items: center;
+    background: var(--danger); color: #fff;
+    box-shadow: var(--lift-ctl);
+    opacity: 0; transform: scale(.5); pointer-events: none;
+    transition: opacity .16s ease, transform .2s cubic-bezier(.32,.72,0,1);
+  }
+  .cell.armed .trash { opacity: 1; transform: none; pointer-events: auto; }
+  .cell.armed .card { transform: scale(.955); box-shadow: var(--edge), var(--lift-sm); }
+  .trash:active { transform: scale(.88); }
   .card .text {
     flex: 1; font-size: 15px; line-height: 1.38; white-space: pre-wrap; overflow: hidden;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; line-clamp: 6;
@@ -181,19 +204,32 @@
     .scrim { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   }
 
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-  .sheet-head .title { font-size: 15px; font-weight: 600; }
-  .link { color: var(--accent); font-size: 17px; padding: 4px 2px; }
-  .link.strong { font-weight: 600; }
-  .link.danger { color: var(--danger); }
+  /* Действия внизу шторки: до них ближе от клавиатуры, чем до верха экрана. */
+  .sheet-actions { display: flex; align-items: center; gap: 12px; padding-top: 6px; }
+  .icon-btn {
+    width: 50px; height: 50px; flex: none; border-radius: 25px;
+    display: grid; place-items: center;
+    background: var(--fill); color: var(--danger);
+    transition: transform .16s cubic-bezier(.32,.72,0,1), background-color .12s ease;
+  }
+  .icon-btn:active { transform: scale(.92); background: var(--fill-2); }
+  .primary {
+    flex: 1; height: 50px; border-radius: 25px;
+    display: grid; place-items: center;
+    background: var(--ctl); color: var(--ctl-ink);
+    font-size: 17px; font-weight: 600; letter-spacing: -.2px;
+    box-shadow: var(--lift-ctl);
+    transition: transform .16s cubic-bezier(.32,.72,0,1), box-shadow .16s ease;
+  }
+  .primary:active { transform: scale(.985); box-shadow: var(--lift-sm); }
 
   /* Без рамки и заливки: текст лежит прямо на шторке.
      Высота считается от видимой части экрана минус клавиатура (--kb),
      иначе на айфоне поле уезжает под неё. */
   textarea {
     width: 100%; resize: none;
-    height: calc(100vh - var(--kb, 0px) - 200px);
-    height: calc(100dvh - var(--kb, 0px) - 200px);
+    height: calc(100vh - var(--kb, 0px) - 264px);
+    height: calc(100dvh - var(--kb, 0px) - 264px);
     max-height: 38vh; min-height: 96px;
     border: 0; outline: none; color: inherit; background: transparent;
     font-family: inherit; font-size: 17px; line-height: 1.45; padding: 2px 2px 6px;
@@ -246,12 +282,14 @@
 
 <section class="sheet" id="editor" role="dialog" aria-modal="true" aria-label="Заметка">
   <div class="grip"></div>
-  <div class="sheet-head">
-    <button class="link danger" id="deleteBtn">Удалить</button>
-    <button class="link strong" id="doneBtn">Готово</button>
-  </div>
   <textarea id="text" placeholder="Текст заметки" enterkeyhint="enter"></textarea>
   <div class="meta" id="editorMeta"></div>
+  <div class="sheet-actions">
+    <button class="icon-btn" id="deleteBtn" aria-label="Удалить заметку">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 4h4M6.5 7l.9 12.1a1 1 0 0 0 1 .9h7.2a1 1 0 0 0 1-.9L17.5 7M10 11v5.5M14 11v5.5"/></svg>
+    </button>
+    <button class="primary" id="doneBtn">Готово</button>
+  </div>
 </section>
 
 <section class="sheet" id="menu" role="dialog" aria-modal="true" aria-label="Меню">
@@ -447,6 +485,68 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2200);
   }
 
+  // --- долгое нажатие по карточке ------------------------------------------
+  // Кнопка удаления живёт рядом с карточкой и всплывает по удержанию.
+  var TRASH_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M4 7h16M10 4h4M6.5 7l.9 12.1a1 1 0 0 0 1 .9h7.2a1 1 0 0 0 1-.9L17.5 7M10 11v5.5M14 11v5.5"/></svg>';
+  var HOLD_MS = 450;
+
+  var armedCell = null;
+  var holdTimer = null;
+  var holdFrom = null;
+  var swallowClick = false;
+
+  function disarm() {
+    if (!armedCell) return;
+    armedCell.classList.remove('armed');
+    armedCell = null;
+  }
+
+  function cancelHold() {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    holdFrom = null;
+  }
+
+  grid.addEventListener('pointerdown', function (e) {
+    swallowClick = false;
+    var cell = e.target.closest ? e.target.closest('.cell') : null;
+    if (!cell || (e.target.closest && e.target.closest('.trash'))) return;
+    holdFrom = { x: e.clientX, y: e.clientY };
+    startHold(cell);
+  });
+
+  function startHold(cell) {
+    holdTimer = setTimeout(function () {
+      holdTimer = null;
+      disarm();
+      cell.classList.add('armed');
+      armedCell = cell;
+      swallowClick = true; // click после удержания не должен открыть редактор
+    }, HOLD_MS);
+  }
+
+  grid.addEventListener('pointermove', function (e) {
+    if (!holdTimer || !holdFrom) return;
+    if (Math.abs(e.clientX - holdFrom.x) > 10 || Math.abs(e.clientY - holdFrom.y) > 10) cancelHold();
+  });
+  grid.addEventListener('pointerup', cancelHold);
+  grid.addEventListener('pointercancel', function () { cancelHold(); });
+
+  // Тап мимо снятой карточки и любая прокрутка снимают взвод.
+  document.addEventListener('pointerdown', function (e) {
+    if (armedCell && !armedCell.contains(e.target)) disarm();
+  }, true);
+  window.addEventListener('scroll', function () { cancelHold(); disarm(); }, { passive: true });
+
+  function dropCard(id) {
+    disarm();
+    var cell = grid.querySelector('[data-id="' + id + '"]');
+    if (!cell) { removeNote(id, false); tick(); return; }
+    cell.classList.add('leave');
+    setTimeout(function () { removeNote(id, false); tick(); }, 240);
+  }
+
   // --- отрисовка -----------------------------------------------------------
   // render() зовётся раз в 30 секунд, поэтому анимация появления вешается
   // только на карточки, которых в прошлой отрисовке не было.
@@ -470,22 +570,26 @@
     if (sig === lastSig) return;
     lastSig = sig;
 
+    disarm(); // перерисовка отвязывает узел, на который смотрел armedCell
     grid.textContent = '';
     var nextShown = Object.create(null);
 
     for (var i = 0; i < notes.length; i++) {
       var n = notes[i];
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.setAttribute('data-id', n.id);
+      nextShown[n.id] = true;
+      if (!shown[n.id]) {
+        cell.classList.add('enter');
+        // Каскад только на первой отрисовке; добавленная заметка выезжает сразу.
+        if (firstPaint) cell.style.animationDelay = (i < 8 ? i * 30 : 240) + 'ms';
+      }
+
       var card = document.createElement('button');
       card.className = 'card';
       card.type = 'button';
       card.style.backgroundColor = cardColor(n, now);
-      card.setAttribute('data-id', n.id);
-      nextShown[n.id] = true;
-      if (!shown[n.id]) {
-        card.classList.add('enter');
-        // Каскад только на первой отрисовке; добавленная заметка выезжает сразу.
-        if (firstPaint) card.style.animationDelay = (i < 8 ? i * 30 : 240) + 'ms';
-      }
 
       var text = document.createElement('div');
       text.className = 'text';
@@ -497,7 +601,16 @@
       when.textContent = remainingLabel(n, now);
       card.appendChild(when);
 
-      grid.appendChild(card);
+      var trash = document.createElement('button');
+      trash.className = 'trash';
+      trash.type = 'button';
+      trash.tabIndex = -1;
+      trash.setAttribute('aria-label', 'Удалить заметку');
+      trash.innerHTML = TRASH_SVG;
+
+      cell.appendChild(card);
+      cell.appendChild(trash);
+      grid.appendChild(cell);
     }
 
     shown = nextShown;
@@ -705,9 +818,13 @@
 
   // --- события -------------------------------------------------------------
   grid.addEventListener('click', function (e) {
-    var card = e.target.closest ? e.target.closest('.card') : null;
-    if (!card) return;
-    var note = findNote(card.getAttribute('data-id'));
+    if (!e.target.closest) return;
+    var cell = e.target.closest('.cell');
+    if (!cell) return;
+    if (e.target.closest('.trash')) { dropCard(cell.getAttribute('data-id')); return; }
+    if (swallowClick) { swallowClick = false; return; }
+    if (armedCell) { disarm(); return; }
+    var note = findNote(cell.getAttribute('data-id'));
     if (note) openEditor(note);
   });
 
@@ -715,12 +832,10 @@
   document.getElementById('doneBtn').addEventListener('click', commitEditor);
   document.getElementById('deleteBtn').addEventListener('click', function () {
     var id = editingId;
-    var drop = (id && !draftIsNew) ? grid.querySelector('[data-id="' + id + '"]') : null;
+    var real = id && !draftIsNew;
     closeSheets();
-    if (!drop) { if (id && !draftIsNew) removeNote(id, false); tick(); return; }
     // Шторка уезжает 380 мс — за это время карточка успевает съёжиться.
-    drop.classList.add('leave');
-    setTimeout(function () { removeNote(id, false); tick(); }, 240);
+    if (real) dropCard(id); else tick();
   });
 
   document.getElementById('menuBtn').addEventListener('click', function () { openSheet(menu); });
