@@ -17,8 +17,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <style>
   /* Материал матовый, а не глянцевый: глубина берётся из мягкой рассеянной
-     тени (--lift), тонкой светлой кромки (--edge) и лёгкого утопления
-     (--inset). Никаких бликов, тиснения и зерна — от них дизайн стареет. */
+     тени (--lift) и тонкой светлой кромки (--edge). Никаких бликов,
+     тиснения и зерна — от них дизайн стареет. */
   :root {
     --bg: #d3d3da;
     --bg-top: #dedee4;
@@ -29,8 +29,6 @@
     --panel-solid: #eeeef2;
     --chrome: rgba(228,228,236,.72);
     --chrome-solid: #e2e2e9;
-    --field: rgba(23,23,26,.05);
-    --field-solid: #e0e0e7;
     --hair: rgba(23,23,26,.10);
     --fill: rgba(23,23,26,.06);
     --accent: #0a7cff;
@@ -43,8 +41,6 @@
     --lift-sm: 0 1px 1.5px rgba(23,23,26,.05), 0 4px 10px -3px rgba(23,23,26,.10);
     --lift-ctl: 0 1px 2px rgba(23,23,26,.16), 0 8px 18px -4px rgba(23,23,26,.28);
     --edge: inset 0 0 0 .5px rgba(255,255,255,.5), inset 0 1px 0 rgba(255,255,255,.7);
-    --inset: inset 0 1px 2px rgba(23,23,26,.09), inset 0 0 0 .5px rgba(23,23,26,.06);
-    --press: inset 0 1px 3px rgba(23,23,26,.13);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -57,8 +53,6 @@
       --panel-solid: #222227;
       --chrome: rgba(28,28,34,.62);
       --chrome-solid: #1a1a1f;
-      --field: rgba(0,0,0,.28);
-      --field-solid: #101013;
       --hair: rgba(255,255,255,.11);
       --fill: rgba(255,255,255,.07);
       --accent: #4da2ff;
@@ -71,8 +65,6 @@
       --lift-sm: 0 1px 2px rgba(0,0,0,.4), 0 5px 12px -3px rgba(0,0,0,.4);
       --lift-ctl: 0 1px 2px rgba(0,0,0,.5), 0 8px 20px -4px rgba(0,0,0,.6);
       --edge: inset 0 0 0 .5px rgba(255,255,255,.09), inset 0 1px 0 rgba(255,255,255,.13);
-      --inset: inset 0 1px 2px rgba(0,0,0,.45), inset 0 0 0 .5px rgba(255,255,255,.05);
-      --press: inset 0 1px 3px rgba(0,0,0,.5);
     }
   }
 
@@ -87,6 +79,7 @@
     overscroll-behavior-y: none;
   }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  body.locked { position: fixed; left: 0; right: 0; width: 100%; height: auto; overflow: hidden; }
 
   .bar {
     position: sticky; top: 0; z-index: 5;
@@ -115,6 +108,16 @@
     transition: transform .16s cubic-bezier(.32,.72,0,1), box-shadow .16s ease;
   }
   .card:active { transform: scale(.975); box-shadow: var(--edge), var(--lift-sm); }
+  /* backwards, а не both: иначе конечный transform анимации перебил бы :active */
+  .card.enter { animation: card-in .34s cubic-bezier(.32,.72,0,1) backwards; }
+  .card.leave { animation: card-out .24s ease forwards; pointer-events: none; }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(10px) scale(.97); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes card-out {
+    to { opacity: 0; transform: scale(.9); }
+  }
   .card .text {
     flex: 1; font-size: 15px; line-height: 1.38; white-space: pre-wrap; overflow: hidden;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; line-clamp: 6;
@@ -122,7 +125,8 @@
   }
   .card .when { font-size: 11px; opacity: .5; font-variant-numeric: tabular-nums; letter-spacing: .2px; }
 
-  .empty { margin: 22vh 24px 0; text-align: center; color: var(--muted); font-size: 15px; }
+  .empty { margin: 22vh 24px 0; text-align: center; color: var(--muted); font-size: 15px; animation: fade-in .4s ease backwards; }
+  @keyframes fade-in { from { opacity: 0; } }
 
   /* Обе стороны заданы, ширина auto — при упоре в max-width поля auto
      центрируют кнопку сами, без transform. */
@@ -150,7 +154,7 @@
   .scrim.open { opacity: 1; visibility: visible; }
 
   .sheet {
-    position: fixed; z-index: 11; left: 0; right: 0; bottom: 0;
+    position: fixed; z-index: 11; left: 0; right: 0; bottom: var(--kb, 0px);
     background: var(--panel-solid);
     border-radius: 34px 34px 0 0;
     padding: 8px 18px calc(env(safe-area-inset-bottom) + 14px);
@@ -183,16 +187,16 @@
   .link.strong { font-weight: 600; }
   .link.danger { color: var(--danger); }
 
+  /* Без рамки и заливки: текст лежит прямо на шторке.
+     Высота считается от видимой части экрана минус клавиатура (--kb),
+     иначе на айфоне поле уезжает под неё. */
   textarea {
-    width: 100%; height: 38vh; min-height: 180px; resize: none;
-    border: 0; outline: none; color: inherit;
-    background: var(--field-solid);
-    border-radius: 22px;
-    box-shadow: var(--inset);
-    font-family: inherit; font-size: 17px; line-height: 1.45; padding: 14px 16px;
-  }
-  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-    textarea { background: var(--field); }
+    width: 100%; resize: none;
+    height: calc(100vh - var(--kb, 0px) - 200px);
+    height: calc(100dvh - var(--kb, 0px) - 200px);
+    max-height: 38vh; min-height: 96px;
+    border: 0; outline: none; color: inherit; background: transparent;
+    font-family: inherit; font-size: 17px; line-height: 1.45; padding: 2px 2px 6px;
   }
   .meta { color: var(--muted); font-size: 12px; padding: 12px 4px 4px; letter-spacing: .1px; }
 
@@ -218,7 +222,9 @@
   }
   .toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -442,10 +448,30 @@
   }
 
   // --- отрисовка -----------------------------------------------------------
+  // render() зовётся раз в 30 секунд, поэтому анимация появления вешается
+  // только на карточки, которых в прошлой отрисовке не было.
+  var shown = Object.create(null);
+  var firstPaint = true;
+  var lastSig = null;
+
   function render() {
     var now = Date.now();
     notes.sort(byNewest);
+
+    // Слепок того, что видно. Без него pageshow и focus перерисовывают сетку
+    // сразу после старта и сносят анимацию появления, а раз в 30 секунд
+    // DOM пересобирается впустую.
+    var sig = [];
+    for (var k = 0; k < notes.length; k++) {
+      sig.push(notes[k].id + '|' + cardColor(notes[k], now) + '|' +
+               remainingLabel(notes[k], now) + '|' + notes[k].text);
+    }
+    sig = sig.join('\n');
+    if (sig === lastSig) return;
+    lastSig = sig;
+
     grid.textContent = '';
+    var nextShown = Object.create(null);
 
     for (var i = 0; i < notes.length; i++) {
       var n = notes[i];
@@ -454,6 +480,12 @@
       card.type = 'button';
       card.style.backgroundColor = cardColor(n, now);
       card.setAttribute('data-id', n.id);
+      nextShown[n.id] = true;
+      if (!shown[n.id]) {
+        card.classList.add('enter');
+        // Каскад только на первой отрисовке; добавленная заметка выезжает сразу.
+        if (firstPaint) card.style.animationDelay = (i < 8 ? i * 30 : 240) + 'ms';
+      }
 
       var text = document.createElement('div');
       text.className = 'text';
@@ -467,6 +499,9 @@
 
       grid.appendChild(card);
     }
+
+    shown = nextShown;
+    firstPaint = false;
 
     emptyEl.hidden = notes.length !== 0;
     countEl.textContent = notes.length ? notes.length + ' / ' + MAX_NOTES : '';
@@ -485,8 +520,46 @@
     return null;
   }
 
+  // --- клавиатура ------------------------------------------------------------
+  // На iOS слой вёрстки не сжимается под клавиатуру: фиксированная шторка
+  // уезжает под неё, а Safari вдобавок прокручивает страницу к полю ввода.
+  // Лечим двумя вещами: --kb (сколько экрана съедено снизу) и блокировкой
+  // прокрутки, пока открыта шторка.
+  var vv = window.visualViewport || null;
+  var root = document.documentElement;
+  var scrollLockY = 0;
+  var scrollLocked = false;
+
+  function syncKeyboard() {
+    var eaten = 0;
+    if (vv) eaten = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    root.style.setProperty('--kb', eaten + 'px');
+  }
+
+  function lockScroll() {
+    if (scrollLocked) return;
+    scrollLockY = window.pageYOffset || 0;
+    document.body.style.top = (-scrollLockY) + 'px';
+    document.body.classList.add('locked');
+    scrollLocked = true;
+  }
+
+  function unlockScroll() {
+    if (!scrollLocked) return;
+    document.body.classList.remove('locked');
+    document.body.style.top = '';
+    scrollLocked = false;
+    window.scrollTo(0, scrollLockY); // позиция списка не должна теряться
+  }
+
+  if (vv) {
+    vv.addEventListener('resize', syncKeyboard);
+    vv.addEventListener('scroll', syncKeyboard);
+  }
+
   // --- шторки --------------------------------------------------------------
   function openSheet(el) {
+    lockScroll();
     scrim.classList.add('open');
     el.classList.add('open');
   }
@@ -498,6 +571,8 @@
     editingId = null;
     draftIsNew = false;
     textEl.blur();
+    root.style.setProperty('--kb', '0px');
+    unlockScroll();
   }
 
   function openEditor(note) {
@@ -639,9 +714,13 @@
   addBtn.addEventListener('click', function () { openEditor(null); });
   document.getElementById('doneBtn').addEventListener('click', commitEditor);
   document.getElementById('deleteBtn').addEventListener('click', function () {
-    if (editingId && !draftIsNew) removeNote(editingId, false);
+    var id = editingId;
+    var drop = (id && !draftIsNew) ? grid.querySelector('[data-id="' + id + '"]') : null;
     closeSheets();
-    tick();
+    if (!drop) { if (id && !draftIsNew) removeNote(id, false); tick(); return; }
+    // Шторка уезжает 380 мс — за это время карточка успевает съёжиться.
+    drop.classList.add('leave');
+    setTimeout(function () { removeNote(id, false); tick(); }, 240);
   });
 
   document.getElementById('menuBtn').addEventListener('click', function () { openSheet(menu); });
